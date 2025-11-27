@@ -1,6 +1,5 @@
-
 import React, { useState, useCallback, useEffect } from 'react';
-import { generateFinancialInsights } from '../../services/geminiService';
+import { generateFinancialInsights } from '../geminiService';
 import { Transaction } from '../../types';
 
 interface InsightsProps {
@@ -49,7 +48,7 @@ const Insights: React.FC<InsightsProps> = ({ transactions }) => {
       fetchInsights();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [transactions]); // Note: fetchInsights is memoized and doesn't need to be in deps
+  }, [transactions]);
 
   const insightIcons = ['📊', '📈', '💡', '🔍', '🔮'];
 

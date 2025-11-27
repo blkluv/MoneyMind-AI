@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Budget } from '../../types';
 import { formatCurrency } from '../../utils/formatting';

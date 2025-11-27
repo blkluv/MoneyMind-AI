@@ -1,7 +1,6 @@
-
 import React, { useState, useEffect, useCallback } from 'react';
 import { Transaction, TransactionType, Category } from '../../types';
-import { categorizeTransaction } from '../../services/geminiService';
+import { categorizeTransaction } from '../geminiService';
 import { DEFAULT_CATEGORIES } from '../../constants';
 
 interface AddTransactionModalProps {
@@ -28,10 +27,15 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({ isOpen, onClo
     if (existingTransaction) {
       setDescription(existingTransaction.description);
       setAmount(String(existingTransaction.amount || ''));
-      setDate(new Date(existingTransaction.date).toISOString().split('T')[0]);
+      // Handle potential date parsing issues
+      try {
+          setDate(new Date(existingTransaction.date).toISOString().split('T')[0]);
+      } catch (e) {
+          setDate(new Date().toISOString().split('T')[0]);
+      }
       setType(existingTransaction.type);
       setCategory(existingTransaction.category);
-       if(existingTransaction.description) {
+       if(existingTransaction.description && isNewViaAi) {
            handleAutoCategorize(existingTransaction.description);
        }
     } else {
@@ -42,7 +46,7 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({ isOpen, onClo
       setType('expense');
       setCategory('Uncategorized');
     }
-  }, [existingTransaction, isOpen]);
+  }, [existingTransaction, isOpen, isNewViaAi]);
 
   const handleAutoCategorize = useCallback(async (text: string) => {
     if (text.trim().length > 3) {
@@ -86,8 +90,8 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({ isOpen, onClo
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
-      <div className="bg-card-bg dark:bg-dark-card-bg rounded-2xl shadow-xl w-full max-w-md p-8 relative">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 backdrop-blur-sm overflow-y-auto">
+      <div className="bg-card-bg dark:bg-dark-card-bg rounded-2xl shadow-xl w-full max-w-md p-8 relative max-h-[90vh] overflow-y-auto">
         {isProcessing && (
             <div className="absolute inset-0 bg-white/80 dark:bg-black/80 flex flex-col items-center justify-center z-10 rounded-2xl">
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
@@ -104,7 +108,7 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({ isOpen, onClo
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               onBlur={handleDescriptionBlur}
-              className="mt-1 block w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-border-color dark:border-dark-border-color rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary text-text-primary dark:text-dark-text-primary"
+              className="mt-1 block w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-border-color dark:border-dark-border-color rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary text-text-primary dark:text-dark-text-primary text-base"
               placeholder="e.g., Dinner with friends"
               required
             />
@@ -117,7 +121,7 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({ isOpen, onClo
               step="0.01"
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
-              className="mt-1 block w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-border-color dark:border-dark-border-color rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary text-text-primary dark:text-dark-text-primary"
+              className="mt-1 block w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-border-color dark:border-dark-border-color rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary text-text-primary dark:text-dark-text-primary text-base"
               placeholder="e.g., 1500"
               required
             />
@@ -129,7 +133,7 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({ isOpen, onClo
                     id="category"
                     value={category}
                     onChange={(e) => setCategory(e.target.value as Category)}
-                    className="mt-1 block w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-border-color dark:border-dark-border-color rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary appearance-none text-text-primary dark:text-dark-text-primary"
+                    className="mt-1 block w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-border-color dark:border-dark-border-color rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary appearance-none text-text-primary dark:text-dark-text-primary text-base"
                     >
                     {DEFAULT_CATEGORIES.map(cat => <option key={cat} value={cat}>{cat}</option>)}
                      <option value="Uncategorized">Uncategorized</option>
@@ -145,7 +149,7 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({ isOpen, onClo
                   id="date"
                   value={date}
                   onChange={(e) => setDate(e.target.value)}
-                  className="mt-1 block w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-border-color dark:border-dark-border-color rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary text-text-primary dark:text-dark-text-primary"
+                  className="mt-1 block w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-border-color dark:border-dark-border-color rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary text-text-primary dark:text-dark-text-primary text-base"
                   required
                 />
               </div>
@@ -155,7 +159,7 @@ const AddTransactionModal: React.FC<AddTransactionModalProps> = ({ isOpen, onClo
                 id="type"
                 value={type}
                 onChange={(e) => setType(e.target.value as TransactionType)}
-                className="mt-1 block w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-border-color dark:border-dark-border-color rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary text-text-primary dark:text-dark-text-primary"
+                className="mt-1 block w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-border-color dark:border-dark-border-color rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary text-text-primary dark:text-dark-text-primary text-base"
                 >
                 <option value="expense">Expense</option>
                 <option value="income">Income</option>

@@ -1,25 +1,27 @@
-const __IMPORT_META: any = import.meta;
-console.log("DEBUG: import.meta.env keys:", Object.keys(__IMPORT_META.env || {}));
-console.log(
-  "DEBUG: VITE_GEMINI_API_KEY =",
-  __IMPORT_META.env?.VITE_GEMINI_API_KEY ? "SET" : "UNDEFINED"
-);
-
-const __GEMINI_KEY = __IMPORT_META.env?.VITE_GEMINI_API_KEY;
-
 import { GoogleGenAI, Type } from "@google/genai";
 import { Transaction, Category, TransactionType } from '../types';
 import { DEFAULT_CATEGORIES } from '../constants';
 
-const apiKey = (import.meta as any).env.VITE_GEMINI_API_KEY;
+// Initialize the Gemini AI client
+// Ensure API key is available via environment variable
+const apiKey = process.env.API_KEY;
 
-const ai = new GoogleGenAI({
-  apiKey: apiKey
-});
+let ai: GoogleGenAI | null = null;
 
+if (apiKey) {
+    try {
+        ai = new GoogleGenAI({ apiKey });
+    } catch (error) {
+        console.error("Error initializing Gemini Client:", error);
+    }
+} else {
+    console.warn("API Key is missing or empty. AI features will be disabled.");
+}
 
 export const categorizeTransaction = async (description: string): Promise<Category> => {
   if (!description) return 'Uncategorized';
+  if (!ai) return 'Uncategorized';
+
   try {
     const prompt = `You are an expert financial categorizer for an Indian audience. Given the transaction description, classify it into one of the following categories: ${DEFAULT_CATEGORIES.join(', ')}. Return only the category name and nothing else. If you cannot determine a category, return "Uncategorized".
 
@@ -31,7 +33,10 @@ export const categorizeTransaction = async (description: string): Promise<Catego
         contents: prompt,
     });
     
-    const category = response.text.trim() as Category;
+    // Safer access to response.text with fallback
+    const text = response.text || '';
+    const category = text.trim() as Category;
+    
     if (DEFAULT_CATEGORIES.includes(category)) {
         return category;
     }
@@ -43,6 +48,8 @@ export const categorizeTransaction = async (description: string): Promise<Catego
 };
 
 export const parseVoiceTransaction = async (text: string): Promise<{ amount: number; description: string; type: TransactionType; error?: string } | null> => {
+    if (!ai) return { error: 'AI Service Unavailable', amount: 0, description: '', type: 'expense' };
+
     try {
         const prompt = `You are an expert financial transaction parser for an Indian user who might use Hinglish (e.g., "kharcha," "mil gaye"). Parse the following text to extract the amount (in numbers), a concise description, and the type ('income' or 'expense').
         - "Received," "mil gaye," "credited" imply 'income'.
@@ -68,7 +75,8 @@ export const parseVoiceTransaction = async (text: string): Promise<{ amount: num
                 }
             }
         });
-        return JSON.parse(response.text);
+        const responseText = response.text || '{}';
+        return JSON.parse(responseText);
     } catch (error) {
         console.error('Error parsing voice transaction:', error);
         return { error: 'API Error', amount: 0, description: '', type: 'expense' };
@@ -76,6 +84,8 @@ export const parseVoiceTransaction = async (text: string): Promise<{ amount: num
 };
 
 export const analyzeReceipt = async (base64Image: string): Promise<{ amount: number; description: string; date: string } | null> => {
+    if (!ai) return null;
+
     try {
         const imagePart = {
             inlineData: { mimeType: 'image/jpeg', data: base64Image },
@@ -99,7 +109,8 @@ export const analyzeReceipt = async (base64Image: string): Promise<{ amount: num
                 }
             }
         });
-        return JSON.parse(response.text);
+        const responseText = response.text || '{}';
+        return JSON.parse(responseText);
     } catch (error) {
         console.error('Error analyzing receipt:', error);
         return null;
@@ -107,6 +118,8 @@ export const analyzeReceipt = async (base64Image: string): Promise<{ amount: num
 };
 
 export const getChatInsight = async (prompt: string, transactions: Transaction[]): Promise<string> => {
+    if (!ai) return "AI Service is not configured correctly. Please check API Key.";
+
     try {
         const response = await ai.models.generateContent({
             model: 'gemini-2.5-pro',
@@ -118,7 +131,7 @@ export const getChatInsight = async (prompt: string, transactions: Transaction[]
             }
         });
 
-        return response.text;
+        return response.text || "I'm sorry, I couldn't generate a response at this time.";
     } catch (error) {
         console.error('Error getting chat insight:', error);
         return "I'm sorry, I'm having trouble connecting to my brain right now. Please try again later.";
@@ -130,6 +143,8 @@ export const generateFinancialInsights = async (currentMonthTransactions: Transa
     if (currentMonthTransactions.length === 0) {
         return ["Add some transactions for this month to get AI insights! 💡"];
     }
+    
+    if (!ai) return ["AI features unavailable. Check API Key configuration."];
 
     try {
         const prompt = `You are "MoneyMind AI", a helpful financial assistant for an Indian user. Analyze the following transaction data. Provide actionable, personalized, and encouraging insights. All monetary values should be in Indian Rupees (₹) with Indian formatting (e.g., ₹12,34,567).
@@ -163,7 +178,7 @@ export const generateFinancialInsights = async (currentMonthTransactions: Transa
             }
         });
 
-        const insightsText = response.text.trim();
+        const insightsText = response.text ? response.text.trim() : '[]';
         const insightsArray = JSON.parse(insightsText);
         
         if (Array.isArray(insightsArray) && insightsArray.every(item => typeof item === 'string')) {
