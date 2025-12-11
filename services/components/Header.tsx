@@ -14,7 +14,7 @@ const Header: React.FC<HeaderProps> = ({ onAddTransaction, theme, setTheme, onVo
     <header className="bg-card-bg dark:bg-dark-card-bg shadow-sm sticky top-0 z-10 border-b border-border-color dark:border-dark-border-color">
       <div className="max-w-7xl mx-auto px-4 md:px-8 py-3 flex justify-between items-center">
         <h1 className="text-2xl font-bold text-primary">
-         💭 I AM WEALTHY
+         IAMWEALTHY.APP
         </h1>
         <div className="flex items-center space-x-2 md:space-x-4">
             <ThemeToggle theme={theme} setTheme={setTheme} />
